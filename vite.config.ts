@@ -8,11 +8,24 @@ export default defineConfig({
   server: {
     watch: {
       usePolling: true
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
     }
   },
   plugins: [react({
-    include: "**/*.tsx"
+    include: "**/*.{js,ts,jsx,tsx}"
   })],
+  optimizeDeps: {
+    include: ['@nextui-org/react']
+  },
+  define: {
+    'process.env': {}
+  },
   css: {
     postcss: {
       plugins: [
