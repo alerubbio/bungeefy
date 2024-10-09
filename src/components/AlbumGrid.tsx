@@ -1,9 +1,11 @@
-import React, { useState, useCallback } from 'react';
-import { useInfiniteQuery } from 'react-query';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useQuery } from 'react-query';
 import axios from 'axios';
-import { useInView } from 'react-intersection-observer';
+import { FixedSizeGrid as Grid } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 import { useDashboard } from './DashboardContext';
-import {ScrollShadow} from "@nextui-org/react";
+import VolumeSlider from './VolumeSlider';
+import LoadingAnimation from './LoadingAnimation';
 
 interface SavedTrack {
   added_at: string;
@@ -14,114 +16,128 @@ interface SavedTrack {
     };
     name: string;
     artists: { name: string }[];
+    preview_url: string | null;
   };
 }
 
-const fetchTracks = async ({ pageParam = 0 }) => {
-  const accessToken = localStorage.getItem('spotifyAccessToken');
+interface SpotifyResponse {
+  items: SavedTrack[];
+  next: string | null;
+}
+
+const fetchAllTracks = async (): Promise<SavedTrack[]> => {
+  const accessToken = localStorage.getItem('spotify_access_token');
   if (!accessToken) throw new Error('No access token');
-  
-  const response = await axios.get(`https://api.spotify.com/v1/me/tracks`, {
-    headers: { 'Authorization': `Bearer ${accessToken}` },
-    params: { limit: 50, offset: pageParam }
-  });
-  return response.data;
+
+  let allTracks: SavedTrack[] = [];
+  let next: string | null = 'https://api.spotify.com/v1/me/tracks?limit=50';
+
+  while (next) {
+    const response: { data: SpotifyResponse } = await axios.get(next, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    allTracks = [...allTracks, ...response.data.items];
+    next = response.data.next;
+  }
+
+  return allTracks;
 };
 
-const IMAGE_SIZES = [
-  { index: 0, size: 640, name: 'Large' },
-  { index: 0, size: 300, name: 'Medium' },
-  { index: 0, size: 40, name: 'Small' },
-];
+const ITEM_SIZE = 40; // Size of each grid item
 
 export default function AlbumGrid() {
-  const [selectedSizeIndex, setSelectedSizeIndex] = useState(2);
-  const { setHoveredTrack } = useDashboard();
-  const { ref, inView } = useInView({
-    threshold: 0.1, // Trigger when 10% of the element is visible
-    rootMargin: '200px', // Start loading 200px before the element comes into view
+  const { setHoveredTrack, setSelectedTrack, volume, setVolume } = useDashboard();
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const { data: tracks, status } = useQuery('allTracks', fetchAllTracks, {
+    staleTime: Infinity, // Keep data fresh indefinitely
   });
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    status,
-  } = useInfiniteQuery('tracks', fetchTracks, {
-    getNextPageParam: (lastPage, pages) => {
-      if (lastPage.next) {
-        return pages.length * 50;
-      }
-      return undefined;
-    },
-  });
-
-  const loadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+  const handleMouseEnter = useCallback((track: SavedTrack['track']) => {
+    setHoveredTrack(track);
+    if (track.preview_url && audioRef.current) {
+      audioRef.current.src = track.preview_url;
+      audioRef.current.volume = volume;
+      audioRef.current.play().catch(error => console.error("Audio playback failed", error));
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [setHoveredTrack, volume]);
 
-  React.useEffect(() => {
-    if (inView) {
-      loadMore();
+  const handleMouseLeave = useCallback(() => {
+    setHoveredTrack(null);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
-  }, [inView, loadMore]);
+  }, [setHoveredTrack]);
 
-  if (status === 'loading') return <div>Loading...</div>;
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  }, [setVolume]);
+
+  const Cell = useCallback(({ columnIndex, rowIndex, style, data }: any) => {
+    const { tracks, columnCount } = data;
+    const index = rowIndex * columnCount + columnIndex;
+    const item = tracks[index];
+    if (!item) return null;
+
+    const image = item.track.album.images.find((img: { width: number; }) => img.width === 64) || item.track.album.images[0];
+    return (
+      <div
+        style={{
+          ...style,
+          width: ITEM_SIZE,
+          height: ITEM_SIZE,
+        }}
+        onMouseEnter={() => handleMouseEnter(item.track)}
+        onMouseLeave={handleMouseLeave}
+        onClick={() => setSelectedTrack(item.track)}
+        className="relative group cursor-pointer"
+      >
+        <img
+          src={image?.url}
+          alt={`${item.track.album.name} cover`}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 flex items-center justify-center transition-opacity duration-200'></div>
+      </div>
+    );
+  }, [handleMouseEnter, handleMouseLeave, setSelectedTrack]);
+
+  if (status === 'loading') return <LoadingAnimation/>;
   if (status === 'error') return <div>An error occurred</div>;
 
-  const selectedSize = IMAGE_SIZES[selectedSizeIndex].size;
-
   return (
-    <ScrollShadow hideScrollBar className="h-full bg-white pt-2">
-      <div className="max-w-full px-4">
-        <div
-          className="grid gap-0"
-          style={{
-            gridTemplateColumns: `repeat(auto-fill, minmax(${selectedSize}px, 1fr))`,
-          }}
-        >
-          {data?.pages.map((page, pageIndex) => (
-            <React.Fragment key={pageIndex}>
-              {page.items.map((item: SavedTrack, index: number) => {
-                const image = item.track.album.images[0];
-                return (
-                  <div
-                    key={index}
-                    className="aspect-square relative group"
-                    onMouseEnter={() => setHoveredTrack(item.track)}
-                    onMouseLeave={() => setHoveredTrack(null)}
-                  >
-                    <img
-                      src={image?.url}
-                      alt={`${item.track.album.name} cover`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      width={selectedSize}
-                      height={selectedSize}
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-70 flex items-center justify-center transition-opacity duration-200 rounded-md">
-                      <div className="text-white text-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2">
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </React.Fragment>
-          ))}
-        </div>
-        <div ref={ref} className="mt-4 text-center">
-          {isFetchingNextPage
-            ? "Loading more..."
-            : hasNextPage
-            ? <button onClick={loadMore} className="px-4 py-2 bg-blue-500 text-white rounded">
-                Load More
-              </button>
-            : "No more tracks to load"}
-        </div>
+    
+    <div className="h-full bg-white pt-4">
+      <div className="px-4 mb-4">
+        <VolumeSlider />
       </div>
-    </ScrollShadow>
+      <div className="h-[calc(100%-60px)]">
+        <AutoSizer>
+          {({ height, width }) => {
+            const columnCount = Math.floor(width / ITEM_SIZE);
+            const rowCount = Math.ceil((tracks?.length || 0) / columnCount);
+            return (
+              <Grid
+                columnCount={columnCount}
+                columnWidth={ITEM_SIZE}
+                height={height}
+                rowCount={rowCount}
+                rowHeight={ITEM_SIZE}
+                width={width}
+                itemData={{ tracks, columnCount }}
+              >
+                {Cell}
+              </Grid>
+            );
+          }}
+        </AutoSizer>
+      </div>
+      <audio ref={audioRef} />
+    </div>
   );
 }
