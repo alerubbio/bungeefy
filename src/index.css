@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-.w-track-detail{
-    width: 500px;
-}
+.no-scrollbars {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  
+    &::-moz-scrollbar {
+      display: none;
+    }
+  
+    &::-ms-scrollbar {
+      display: none;
+    }
+  }

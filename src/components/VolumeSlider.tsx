@@ -11,7 +11,7 @@ const VolumeSlider: React.FC = () => {
   }, [value, setVolume]);
 
   return (
-    <div className="flex flex-col gap-2 w-full h-full max-w-md items-start justify-center">
+    <div className="flex flex-col w-half h-full max-w-md items-start justify-center">
       <Slider 
         aria-label="Volume"
         size="sm"
@@ -25,7 +25,7 @@ const VolumeSlider: React.FC = () => {
             radius="full"
             onPress={() => setValue((prev) => Math.max(0, Number(prev) - 10))}
           >
-            <span className="text-small inline-flex items-center justify-center w-6 h-6">
+            <span className="text-small inline-flex items-center justify-center w-5 h-5">
 
             <img 
           src="src/assets/volume-icon.png" 

@@ -1,8 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { useQuery } from 'react-query';
 import axios from 'axios';
-import { FixedSizeGrid as Grid } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
 import { useDashboard } from './DashboardContext';
 import VolumeSlider from './VolumeSlider';
 import LoadingAnimation from './LoadingAnimation';
@@ -10,6 +8,7 @@ import LoadingAnimation from './LoadingAnimation';
 interface SavedTrack {
   added_at: string;
   track: {
+    id: string;
     album: {
       images: { url: string; width: number; height: number }[];
       name: string;
@@ -46,11 +45,11 @@ const fetchAllTracks = async (): Promise<SavedTrack[]> => {
 const ITEM_SIZE = 40; // Size of each grid item
 
 export default function AlbumGrid() {
-  const { setHoveredTrack, setSelectedTrack, volume, setVolume } = useDashboard();
+  const { setHoveredTrack, setSelectedTrack, volume } = useDashboard();
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   const { data: tracks, status } = useQuery('allTracks', fetchAllTracks, {
-    staleTime: Infinity, // Keep data fresh indefinitely
+    staleTime: Infinity,
   });
 
   const handleMouseEnter = useCallback((track: SavedTrack['track']) => {
@@ -70,31 +69,16 @@ export default function AlbumGrid() {
     }
   }, [setHoveredTrack]);
 
-  const handleVolumeChange = useCallback((newVolume: number) => {
-    setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
-    }
-  }, [setVolume]);
-
-  const Cell = useCallback(({ columnIndex, rowIndex, style, data }: any) => {
-    const { tracks, columnCount } = data;
-    const index = rowIndex * columnCount + columnIndex;
-    const item = tracks[index];
-    if (!item) return null;
-
+  const renderAlbum = useCallback((item: SavedTrack) => {
     const image = item.track.album.images.find((img: { width: number; }) => img.width === 64) || item.track.album.images[0];
     return (
       <div
-        style={{
-          ...style,
-          width: ITEM_SIZE,
-          height: ITEM_SIZE,
-        }}
+        key={item.track.id}
         onMouseEnter={() => handleMouseEnter(item.track)}
         onMouseLeave={handleMouseLeave}
         onClick={() => setSelectedTrack(item.track)}
         className="relative group cursor-pointer"
+        style={{ width: ITEM_SIZE, height: ITEM_SIZE }}
       >
         <img
           src={image?.url}
@@ -111,31 +95,20 @@ export default function AlbumGrid() {
   if (status === 'error') return <div>An error occurred</div>;
 
   return (
-    
-    <div className="h-full bg-white pt-4">
-      <div className="px-4 mb-4">
+    <div className="h-full bg-white pt-2">
+      <div className="px-4 mb-0">
         <VolumeSlider />
       </div>
-      <div className="h-[calc(100%-60px)]">
-        <AutoSizer>
-          {({ height, width }) => {
-            const columnCount = Math.floor(width / ITEM_SIZE);
-            const rowCount = Math.ceil((tracks?.length || 0) / columnCount);
-            return (
-              <Grid
-                columnCount={columnCount}
-                columnWidth={ITEM_SIZE}
-                height={height}
-                rowCount={rowCount}
-                rowHeight={ITEM_SIZE}
-                width={width}
-                itemData={{ tracks, columnCount }}
-              >
-                {Cell}
-              </Grid>
-            );
+      <div className="h-[calc(100%-60px)] no-scrollbars overflow-auto p-4 pt-0">
+        <div 
+          className="grid" 
+          style={{
+            gridTemplateColumns: `repeat(auto-fill, minmax(${ITEM_SIZE}px, 0fr))`,
+            width: '100%',
           }}
-        </AutoSizer>
+        >
+          {tracks?.map(renderAlbum)}
+        </div>
       </div>
       <audio ref={audioRef} />
     </div>
