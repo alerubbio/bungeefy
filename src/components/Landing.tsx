@@ -20,7 +20,7 @@ const Landing: React.FC = () => {
   const code = new URLSearchParams(window.location.search).get('code');
   const { accessToken, logout, refreshAccessTokenIfNeeded } = useAuth(code);
 
-  const { data: userProfile, error, isLoading, refetch } = useDebouncedQuery(
+  const { data: userProfile, error, isLoading } = useDebouncedQuery(
     ['userProfile', accessToken],
     () => fetchUserProfile(accessToken as string),
     {
