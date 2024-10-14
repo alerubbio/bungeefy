@@ -4,7 +4,6 @@ import axios from 'axios';
 import { useDashboard } from './DashboardContext';
 import VolumeSlider from './VolumeSlider';
 import LoadingAnimation from './LoadingAnimation';
-import TrackDetail from './TrackDetail';
 
 interface SavedTrack {
   added_at: string;
@@ -43,10 +42,10 @@ const fetchAllTracks = async (): Promise<SavedTrack[]> => {
   return allTracks;
 };
 
-const ITEM_SIZE = 40; // Size of each grid item
+const ITEM_SIZE = 36; // Size of each grid item
 
 export default function AlbumGrid() {
-  const { setHoveredTrack, setSelectedTrack, volume, hoveredTrack, selectedTrack } = useDashboard();
+  const { setHoveredTrack, setSelectedTrack, volume, hoveredTrack } = useDashboard();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { data: tracks, status } = useQuery('allTracks', fetchAllTracks, {
@@ -98,14 +97,14 @@ export default function AlbumGrid() {
   if (status === 'error') return <div>An error occurred</div>;
 
   return (
-    <div className="h-full bg-white pt-2">
-      <div className="px-4 mb-0">
+    <div className="flex flex-col h-full w-5/6 bg-white">
+      <div className="p-0">
         <VolumeSlider />
       </div>
-      <div className="flex">
-        <div className="w-full h-[calc(100%-60px)] no-scrollbars overflow-auto p-4 pt-0">
+      <div className="flex-grow overflow-hidden">
+        <div className="h-full overflow-y-auto p-4 pl-6 pt-0 no-scrollbars">
           <div 
-            className="grid" 
+            className="grid gap-0"
             style={{
               gridTemplateColumns: `repeat(auto-fill, minmax(${ITEM_SIZE}px, 0fr))`,
               width: '100%',
