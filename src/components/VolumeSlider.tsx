@@ -22,7 +22,7 @@ const VolumeSlider: React.FC = () => {
         </div>
         <Slider
           aria-label="Volume"
-          size="sm"
+          size="md"
           color="success"
           value={value}
           onChange={setValue}

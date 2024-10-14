@@ -17,14 +17,14 @@ const DashboardContent: React.FC = () => {
 
   return (
     <div className="flex h-[calc(100vh-300px)]">
-      <div className="w-1/4 h-full overflow-hidden">
+      <div className="w-1/4 h-full">
         <AlbumGrid />
       </div>
-      <div className="w-1/2 p-4 overflow-y-auto flex">
-        <div className="w-1/2">
+      <div className="w-3/4 p-4 overflow-y-auto flex">
+        <div className="w-1/3">
           <TrackDetail onHover={handleTrackHover} onLeave={handleTrackLeave} />
         </div>
-        <div className="w-1/2">
+        <div className="w-2/3">
           <TrackInfo />
         </div>
       </div>

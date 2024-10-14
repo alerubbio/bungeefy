@@ -97,24 +97,26 @@ export default function AlbumGrid() {
   if (status === 'error') return <div>An error occurred</div>;
 
   return (
-    <div className="flex flex-col h-full w-5/6 bg-white">
+    <>
       <div className="p-0">
         <VolumeSlider />
       </div>
+    <div className="flex flex-col h-full w-full bg-white">
       <div className="flex-grow overflow-hidden">
-        <div className="h-full overflow-y-auto p-4 pl-6 pt-0 no-scrollbars">
+        <div className="h-full overflow-y-auto p-4 pl-6 no-scrollbars">
           <div 
             className="grid gap-0"
             style={{
               gridTemplateColumns: `repeat(auto-fill, minmax(${ITEM_SIZE}px, 0fr))`,
               width: '100%',
             }}
-          >
+            >
             {tracks?.map(renderAlbum)}
           </div>
         </div>
       </div>
       <audio ref={audioRef} />
     </div>
+            </>
   );
 }

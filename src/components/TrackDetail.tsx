@@ -9,7 +9,7 @@ interface TrackDetailProps {
 const TrackDetail: React.FC<TrackDetailProps> = ({ onHover, onLeave }) => {
   const { hoveredTrack, selectedTrack } = useDashboard();
 
-  const trackToShow = selectedTrack || hoveredTrack;
+  const trackToShow = hoveredTrack || selectedTrack;
 
   if (!trackToShow) return null;
 
