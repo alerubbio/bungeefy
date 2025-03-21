@@ -18,7 +18,13 @@ app.post('/login', (req, res) => {
   console.log('Received code:', code);
   console.log('Redirect URI:', process.env.SPOTIFY_REDIRECT_URI);
   console.log('Client ID:', process.env.SPOTIFY_CLIENT_ID);
+  console.log('Client Secret:', process.env.SPOTIFY_CLIENT_SECRET ? 'Present' : 'Missing');
   
+  if (!code) {
+    console.error('No code provided in request');
+    return res.status(400).json({ error: 'No code provided' });
+  }
+
   spotifyApi
     .authorizationCodeGrant(code)
     .then(data => {
@@ -34,6 +40,9 @@ app.post('/login', (req, res) => {
       if (err.body && err.body.error_description) {
         console.error('Spotify API error:', err.body.error_description);
       }
+      if (err.body && err.body.error) {
+        console.error('Spotify error type:', err.body.error);
+      }
       res.status(400).json({ error: 'Invalid code', details: err.message });
     });
 });
@@ -43,4 +52,5 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log('Redirect URI:', process.env.SPOTIFY_REDIRECT_URI);
   console.log('Client ID:', process.env.SPOTIFY_CLIENT_ID);
+  console.log('Client Secret:', process.env.SPOTIFY_CLIENT_SECRET ? 'Present' : 'Missing');
 });

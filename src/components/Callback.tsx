@@ -1,15 +1,19 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000'; // Make sure this matches your Express server URL
+const API_URL = 'http://localhost:5000';
 
 const Callback: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const processedRef = useRef(false);
 
   const handleLogin = useCallback(async (code: string) => {
+    if (processedRef.current) return;
+    processedRef.current = true;
+
     console.log('Attempting to exchange code for token...');
     try {
       const response = await axios.post(`${API_URL}/login`, { code });
@@ -38,9 +42,9 @@ const Callback: React.FC = () => {
     const code = urlParams.get('code');
     console.log('Authorization code from URL:', code);
 
-    if (code) {
+    if (code && !processedRef.current) {
       handleLogin(code);
-    } else {
+    } else if (!code) {
       console.error('No authorization code found in the URL');
       setError('No authorization code found in the URL');
     }

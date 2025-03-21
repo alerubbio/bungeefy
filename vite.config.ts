@@ -23,9 +23,6 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@nextui-org/react']
   },
-  define: {
-    'process.env': {}
-  },
   css: {
     postcss: {
       plugins: [
